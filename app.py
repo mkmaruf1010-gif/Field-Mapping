@@ -148,7 +148,7 @@ if loc and 'coords' in loc:
     )
 
     # --- ৮. পয়েন্ট সেভ ও গুগল শিট সিঙ্ক ---
-    if st.button("Capture & Sync to Google Sheet"):
+    if st.button("Capture Coordinate"):
         elevation = get_elevation(lat, lon)
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -216,6 +216,6 @@ if gsheet:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         else:
-            st.info("গুগল শিটে এখনো কোনো জিপিএস ডাটা জমা হয়নি।")
+            st.info("No Data")
     except Exception as e:
         st.error(f"Error loading table: {e}")
