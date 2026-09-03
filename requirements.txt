@@ -1,0 +1,5 @@
+streamlit
+earthengine-api
+pandas
+openpyxl
+streamlit-js-eval
