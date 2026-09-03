@@ -28,29 +28,49 @@ def init_earth_engine():
 
 gee_active = init_earth_engine()
 
-# --- ২. গুগল শিটস কানেকশন ---
+# --- ২. গুগল শিটস কানেকশন (সেন্ট্রাল অবজেক্ট তৈরি) ---
 @st.cache_resource
-def connect_to_gsheet():
+def connect_to_gsheet_client():
     try:
         scope = [
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive"
         ]
         credentials_dict = dict(st.secrets["gee_credentials"])
-        
         creds = Credentials.from_service_account_info(credentials_dict, scopes=scope)
         client = gspread.authorize(creds)
         
-        # আপনার Google Sheet-এর নাম
-        sheet = client.open("FieldSurvey").sheet1
-        return sheet
+        # আপনার Google Sheet ওপেন করা
+        spreadsheet = client.open("FieldSurvey")
+        return spreadsheet
     except Exception as e:
         st.error(f"Google Sheet Connection Error: {e}")
         return None
 
-gsheet = connect_to_gsheet()
+gsheet_spreadsheet = connect_to_gsheet_client()
 
-# --- ৩. এলিভেশন ফেচিং ফাংশন (১০ দশমিক স্থান সাপোর্ট) ---
+# ডাটা সেভ করার জন্য ১ম ট্যাব
+gsheet = gsheet_spreadsheet.sheet1 if gsheet_spreadsheet else None
+
+# --- ৩. গুগল শিটের ২য় ট্যাব থেকে সার্ভেয়ার নামের তালিকা পড়ার ফাংশন ---
+@st.cache_data(ttl=60) # প্রতি ১ মিনিট পর পর নামের লিস্ট আপডেট হবে
+def get_surveyor_list():
+    try:
+        if gsheet_spreadsheet:
+            # ২য় ট্যাব (index 1) থেকে নাম সংগ্রহ
+            surveyor_tab = gsheet_spreadsheet.get_worksheet(1)
+            names = surveyor_tab.col_values(1)[1:] # A1 সেলের Header বাদ দিয়ে সব নাম আনা
+            
+            valid_names = [name.strip() for name in names if name.strip()]
+            if valid_names:
+                return valid_names
+    except Exception as e:
+        st.warning(f"২য় ট্যাব থেকে সার্ভেয়ার নাম পড়তে সমস্যা হয়েছে: {e}")
+    
+    # ব্যাকআপ রেসপন্স (যদি ২য় ট্যাবে কোনো নাম না থাকে)
+    return ["Surveyor_1", "Surveyor_2", "Surveyor_3"]
+
+# --- ৪. এলিভেশন ফেচিং ফাংশন (১০ দশমিক স্থান সাপোর্ট) ---
 def get_elevation(lat, lon):
     if gee_active:
         try:
@@ -76,19 +96,22 @@ def get_elevation(lat, lon):
     except Exception:
         return "N/A"
 
-# --- ৪. ইউজার ইন্টারফেস (UI) ---
+# --- ৫. ইউজার ইন্টারফেস (UI) ---
 st.title("📍 Smart GIS Field GPS & Elevation Collector")
 st.caption("Multi-User Live Geolocation, Google Earth Elevation & Google Sheets Sync")
 
 col1, col2 = st.columns(2)
 with col1:
-    surveyor_name = st.text_input("Surveyor Name / ID", "Surveyor_1")
+    # গুগল শিটের ২য় ট্যাব থেকে নিয়ে আসা নামের ড্রপডাউন সিলেক্টবক্স
+    surveyor_options = get_surveyor_list()
+    surveyor_name = st.selectbox("Select Surveyor Name / ID", surveyor_options)
+    
 with col2:
     feature_type = st.selectbox("Feature Type", ["Point of Interest", "Water Body", "Road Node", "Boundary Point"])
 
 st.markdown("---")
 
-# --- ৫. লাইভ জিপিএস ক্যাপচার ---
+# --- ৬. লাইভ জিপিএস ক্যাপচার ---
 st.subheader("Live Coordinate Capture")
 loc = get_geolocation()
 
@@ -107,7 +130,7 @@ if loc and 'coords' in loc:
         unsafe_allow_html=True
     )
 
-    # --- ৬. পয়েন্ট সেভ ও গুগল শিট সিঙ্ক ---
+    # --- ৭. পয়েন্ট সেভ ও গুগল শিট সিঙ্ক ---
     if st.button("➕ Capture & Sync to Google Sheet"):
         elevation = get_elevation(lat, lon)
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -138,9 +161,9 @@ if loc and 'coords' in loc:
 else:
     st.warning("⚠️ Please 'Allow' Location Permission on your browser and enable device GPS.")
 
-# --- ৭. রিয়েল-টাইম সেন্ট্রাল গুগল শিট ড্যাশবোর্ড ---
+# --- ৮. রিয়েল-টাইম সেন্ট্রাল গুগল শিট ড্যাশবোর্ড ---
 st.markdown("---")
-st.subheader(" Live Central Google Sheet Data")
+st.subheader("📊 Live Central Google Sheet Data")
 
 if gsheet:
     try:
