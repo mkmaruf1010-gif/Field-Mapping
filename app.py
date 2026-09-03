@@ -52,7 +52,7 @@ gsheet_spreadsheet = connect_to_gsheet_client()
 gsheet = gsheet_spreadsheet.sheet1 if gsheet_spreadsheet else None
 
 # --- ৩. ৩য় ট্যাব (Index 2) থেকে সার্ভেয়ার নামের তালিকা পড়ার ফাংশন ---
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=3000)
 def get_surveyor_list():
     try:
         if gsheet_spreadsheet:
@@ -69,7 +69,7 @@ def get_surveyor_list():
     return ["Surveyor_1", "Surveyor_2", "Surveyor_3"]
 
 # --- ৪. ২য় ট্যাব (Index 1) থেকে Feature Type পড়ার ফাংশন ---
-@st.cache_data(ttl=300)
+@st.cache_data(ttl=3000)
 def get_feature_types():
     try:
         if gsheet_spreadsheet:
@@ -112,7 +112,7 @@ def get_elevation(lat, lon):
         return "N/A"
 
 # --- ৬. ইউজার ইন্টারফেস (UI) ---
-st.title("📍 Mass GIS Field GPS & Elevation Collector")
+st.title(" Mass GIS Field GPS & Elevation Data Collector")
 st.caption("Multi-User Live Geolocation")
 
 col1, col2 = st.columns(2)
@@ -176,11 +176,11 @@ if loc and 'coords' in loc:
             st.error("Google Sheet কানেক্ট করা নেই। secrets.toml চেক করুন।")
 
 else:
-    st.warning("⚠️ Please 'Allow' Location Permission on your browser and enable device GPS.")
+    st.warning(" Please 'Allow' Location Permission on your browser and enable device GPS.")
 
 # --- ৯. রিয়েল-টাইম সেন্ট্রাল গুগল শিট ড্যাশবোর্ড ---
 st.markdown("---")
-st.subheader("📊 Data View")
+st.subheader(" Data View")
 
 if gsheet:
     try:
@@ -189,7 +189,7 @@ if gsheet:
             df_all = pd.DataFrame(records)
             
             unique_surveyors = ["All Surveyors"] + list(df_all["Surveyor"].unique())
-            selected_surveyor = st.selectbox("🎯 Filter by Surveyor:", unique_surveyors)
+            selected_surveyor = st.selectbox(" Filter by Surveyor:", unique_surveyors)
             
             if selected_surveyor != "All Surveyors":
                 filtered_df = df_all[df_all["Surveyor"] == selected_surveyor]
@@ -210,7 +210,7 @@ if gsheet:
             excel_data = convert_df_to_excel(filtered_df)
 
             st.download_button(
-                label="📥 Export Current View to Excel (.xlsx)",
+                label=" Export Current View to Excel (.xlsx)",
                 data=excel_data,
                 file_name=f"GIS_Survey_{selected_surveyor}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
