@@ -3,3 +3,5 @@ earthengine-api
 pandas
 openpyxl
 streamlit-js-eval
+gspread
+oauth2client
