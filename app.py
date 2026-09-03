@@ -52,7 +52,7 @@ gsheet_spreadsheet = connect_to_gsheet_client()
 gsheet = gsheet_spreadsheet.sheet1 if gsheet_spreadsheet else None
 
 # --- ৩. ৩য় ট্যাব (Index 2) থেকে সার্ভেয়ার নামের তালিকা পড়ার ফাংশন ---
-@st.cache_data(ttl=3000)
+@st.cache_data(ttl=05)
 def get_surveyor_list():
     try:
         if gsheet_spreadsheet:
@@ -69,7 +69,7 @@ def get_surveyor_list():
     return ["Surveyor_1", "Surveyor_2", "Surveyor_3"]
 
 # --- ৪. ২য় ট্যাব (Index 1) থেকে Feature Type পড়ার ফাংশন ---
-@st.cache_data(ttl=3000)
+@st.cache_data(ttl=05)
 def get_feature_types():
     try:
         if gsheet_spreadsheet:
