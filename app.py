@@ -57,7 +57,7 @@ def get_surveyor_list():
     try:
         if gsheet_spreadsheet:
             # ৩য় ট্যাব থেকে নাম রিড করা
-            surveyor_tab = gsheet_spreadsheet.get_worksheet(2)
+            surveyor_tab = gsheet_spreadsheet.get_worksheet(1)
             names = surveyor_tab.col_values(1)[1:]
             
             valid_names = [name.strip() for name in names if name.strip()]
@@ -74,7 +74,7 @@ def get_feature_types():
     try:
         if gsheet_spreadsheet:
             # ২য় ট্যাব থেকে ফিচার রিড করা
-            feature_tab = gsheet_spreadsheet.get_worksheet(1)
+            feature_tab = gsheet_spreadsheet.get_worksheet(2)
             features = feature_tab.col_values(1)[1:]
             
             valid_features = [f.strip() for f in features if f.strip()]
