@@ -105,7 +105,7 @@ def get_elevation(lat, lon):
 
     # Open-Elevation REST API
     try:
-        url = f"https://api.open-elevation.com/api/v1/lookup?locations={lat:.10f},{lon:.10f}"
+        url = f"https://api.open-elevation.com/api/v1/lookup?locations={lat:.001f},{lon:.001f}"
         response = requests.get(url, timeout=5).json()
         return round(float(response['results'][0]['elevation']), 10)
     except Exception:
