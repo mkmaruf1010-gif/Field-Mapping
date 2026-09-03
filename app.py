@@ -11,36 +11,49 @@ st.set_page_config(page_title="Multi-User GIS Field Collector", layout="wide")
 @st.cache_resource
 def init_earth_engine():
     try:
-        # Streamlit Secrets অথবা লোকাল JSON Key ফাইল থেকে সার্ভিস অ্যাকাউন্ট কানেক্ট করা
-        # st.secrets["gee_json"] ব্যবহার করা নিরাপদ
-        service_account = st.secrets["gee_service_account"]
-        json_key = json.loads(st.secrets["gee_json_key"])
+        # TOML এর [gee_credentials] সরাসরি পড়া
+        credentials_dict = dict(st.secrets["gee_credentials"])
         
-        credentials = ee.ServiceAccountCredentials(service_account, key_data=json_key)
+        credentials = ee.ServiceAccountCredentials(
+            credentials_dict["client_email"],
+            key_data=credentials_dict
+        )
         ee.Initialize(credentials)
         return True
     except Exception as e:
-        # বিকল্প অপশন: যদি সার্ভিস অ্যাকাউন্ট না থাকে তবে SRTM / Open-Elevation ব্যাকআপ কাজ করবে
+        st.error(f"GEE Auth Error: {e}")
         return False
 
+# বৈশ্বিক চলক ইনিশিয়ালাইজেশন
 gee_active = init_earth_engine()
 
-# --- ২. এলিভেশন ফেচিং ফাংশন (Earth Engine & Backup DEM) ---
-def get_elevation_from_gee(lat, lon):
+import requests
+
+def get_elevation(lat, lon):
+    # ১ম চেষ্টা: Google Earth Engine (SRTM 30m)
     if gee_active:
         try:
-            point = ee.Geometry.Point([lon, lat])
-            # NASADEM or SRTM 30m Global DEM Dataset
+            point = ee.Geometry.Point([lon, lat]) # Longitude, Latitude ক্রম সঠিক রাখা জরুরি
             dem = ee.Image('USGS/SRTM30M')
             elevation_data = dem.reduceRegion(
                 reducer=ee.Reducer.first(),
                 geometry=point,
                 scale=30
             ).getInfo()
-            return elevation_data.get('elevation', None)
+            
+            val = elevation_data.get('elevation')
+            if val is not None:
+                return round(val, 2)
         except Exception:
             pass
-    return None
+
+    # ২য় চেষ্টা (Fallback): Open-Elevation Free REST API
+    try:
+        url = f"https://api.open-elevation.com/api/v1/lookup?locations={lat},{lon}"
+        response = requests.get(url, timeout=5).json()
+        return response['results'][0]['elevation']
+    except Exception:
+        return "N/A"
 
 # --- ৩. সেশন স্টেট ইনিশিয়ালাইজেশন (ডাটা টেবিলে জমা রাখার জন্য) ---
 if 'field_data' not in st.session_state:
