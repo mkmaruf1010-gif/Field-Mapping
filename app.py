@@ -68,7 +68,12 @@ if loc and 'coords' in loc:
     lon = loc['coords']['longitude']
     accuracy = loc['coords']['accuracy']
 
-    st.success(f"<b>GPS Location Fetched!</b><br>Latitude: {lat:.6f} | Longitude: {lon:.6f} (Accuracy: ±{accuracy:.1f}m)", unsafe_allow_html=True)
+    st.markdown(
+    f"<div style='padding: 10px; background-color: #d4edda; color: #155724; border-radius: 5px;'>"
+    f"<b>GPS Location Fetched!</b><br>Latitude: {lat:.6f} | Longitude: {lon:.6f} (Accuracy: ±{accuracy:.1f}m)"
+    f"</div>", 
+    unsafe_allow_html=True
+)
 
     # ৬. পয়েন্ট সেভ করার বাটন
     if st.button("➕ Capture & Add to Field Sheet"):
