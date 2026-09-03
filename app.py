@@ -52,25 +52,43 @@ gsheet_spreadsheet = connect_to_gsheet_client()
 # ডাটা সেভ করার জন্য ১ম ট্যাব
 gsheet = gsheet_spreadsheet.sheet1 if gsheet_spreadsheet else None
 
-# --- ৩. গুগল শিটের ২য় ট্যাব থেকে সার্ভেয়ার নামের তালিকা পড়ার ফাংশন ---
+# --- ৩. গুগল শিটের ২য় ট্যাব থেকে সার্ভেয়ার নামের তালিকা পড়ার ফাংশন ---
 @st.cache_data(ttl=60) # প্রতি ১ মিনিট পর পর নামের লিস্ট আপডেট হবে
 def get_surveyor_list():
     try:
         if gsheet_spreadsheet:
-            # ২য় ট্যাব (index 1) থেকে নাম সংগ্রহ
+            # ২য় ট্যাব (index 1) থেকে নাম সংগ্রহ
             surveyor_tab = gsheet_spreadsheet.get_worksheet(1)
-            names = surveyor_tab.col_values(1)[1:] # A1 সেলের Header বাদ দিয়ে সব নাম আনা
+            names = surveyor_tab.col_values(1)[1:] # A1 সেলের Header বাদ দিয়ে সব নাম আনা
             
             valid_names = [name.strip() for name in names if name.strip()]
             if valid_names:
                 return valid_names
     except Exception as e:
-        st.warning(f"২য় ট্যাব থেকে সার্ভেয়ার নাম পড়তে সমস্যা হয়েছে: {e}")
+        st.warning(f"২য় ট্যাব থেকে সার্ভেয়ার নাম পড়তে সমস্যা হয়েছে: {e}")
     
-    # ব্যাকআপ রেসপন্স (যদি ২য় ট্যাবে কোনো নাম না থাকে)
+    # ব্যাকআপ রেসপন্স (যদি ২য় ট্যাবে কোনো নাম না থাকে)
     return ["Surveyor_1", "Surveyor_2", "Surveyor_3"]
 
-# --- ৪. এলিভেশন ফেচিং ফাংশন (১০ দশমিক স্থান সাপোর্ট) ---
+# --- ৪. গুগল শিটের ৩য় ট্যাব থেকে Feature Type-এর তালিকা পড়ার ফাংশন ---
+@st.cache_data(ttl=300) # ১,০০০+ ডাটা তাই ৫ মিনিট (৩০০ সেকেন্ড) ক্যাশ রাখা সুবিধাজনক
+def get_feature_types():
+    try:
+        if gsheet_spreadsheet:
+            # ৩য় ট্যাব (index 2) থেকে ফিচার সংগ্রহ
+            feature_tab = gsheet_spreadsheet.get_worksheet(2)
+            features = feature_tab.col_values(1)[1:] # A1 সেলের Header বাদ দিয়ে সব মান আনা
+            
+            valid_features = [f.strip() for f in features if f.strip()]
+            if valid_features:
+                return valid_features
+    except Exception as e:
+        st.warning(f"৩য় ট্যাব থেকে Feature Type পড়তে সমস্যা হয়েছে: {e}")
+    
+    # ব্যাকআপ রেসপন্স (যদি ৩য় ট্যাব খালি থাকে)
+    return ["Point of Interest", "Water Body", "Road Node", "Boundary Point"]
+
+# --- ৫. এলিভেশন ফেচিং ফাংশন (১০ দশমিক স্থান সাপোর্ট) ---
 def get_elevation(lat, lon):
     if gee_active:
         try:
@@ -96,22 +114,24 @@ def get_elevation(lat, lon):
     except Exception:
         return "N/A"
 
-# --- ৫. ইউজার ইন্টারফেস (UI) ---
+# --- ৬. ইউজার ইন্টারফেস (UI) ---
 st.title(" Mass GIS Field GPS & Elevation Collector")
 st.caption("Multi-User Live Geolocation")
 
 col1, col2 = st.columns(2)
 with col1:
-    # গুগল শিটের ২য় ট্যাব থেকে নিয়ে আসা নামের ড্রপডাউন সিলেক্টবক্স
+    # গুগল শিটের ২য় ট্যাব থেকে আসা সার্ভেয়ার ড্রপডাউন
     surveyor_options = get_surveyor_list()
     surveyor_name = st.selectbox("Select Surveyor Name / ID", surveyor_options)
     
 with col2:
-    feature_type = st.selectbox("Feature Type", ["Point of Interest", "Water Body", "Road Node", "Boundary Point"])
+    # গুগল শিটের ৩য় ট্যাব থেকে আসা ১,০০০+ ফিচার টাইপ ড্রপডাউন
+    feature_options = get_feature_types()
+    feature_type = st.selectbox("Select Feature Type", feature_options)
 
 st.markdown("---")
 
-# --- ৬. লাইভ জিপিএস ক্যাপচার ---
+# --- ৭. লাইভ জিপিএস ক্যাপচার ---
 st.subheader("Live Coordinate Capture")
 loc = get_geolocation()
 
@@ -130,7 +150,7 @@ if loc and 'coords' in loc:
         unsafe_allow_html=True
     )
 
-    # --- ৭. পয়েন্ট সেভ ও গুগল শিট সিঙ্ক ---
+    # --- ৮. পয়েন্ট সেভ ও গুগল শিট সিঙ্ক ---
     if st.button("Capture & Sync to Google Sheet"):
         elevation = get_elevation(lat, lon)
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -152,7 +172,7 @@ if loc and 'coords' in loc:
                 ]
                 
                 gsheet.append_row(row_data)
-                st.toast(f"Point #{point_id} Google Sheet-এ সিঙ্ক হয়েছে!")
+                st.toast(f"Point #{point_id} Google Sheet-এ সিঙ্ক হয়েছে!")
             except Exception as e:
                 st.error(f"Data Sync Failed: {e}")
         else:
@@ -161,7 +181,7 @@ if loc and 'coords' in loc:
 else:
     st.warning(" Please 'Allow' Location Permission on your browser and enable device GPS.")
 
-# --- ৮. রিয়েল-টাইম সেন্ট্রাল গুগল শিট ড্যাশবোর্ড ---
+# --- ৯. রিয়েল-টাইম সেন্ট্রাল গুগল শিট ড্যাশবোর্ড ---
 st.markdown("---")
 st.subheader("Data View ")
 
@@ -199,6 +219,6 @@ if gsheet:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         else:
-            st.info("গুগল শিটে এখনো কোনো জিপিএস ডাটা জমা হয়নি।")
+            st.info("গুগল শিটে এখনো কোনো জিপিএস ডাটা জমা হয়নি।")
     except Exception as e:
         st.error(f"Error loading table: {e}")
