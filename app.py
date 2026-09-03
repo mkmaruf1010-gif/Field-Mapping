@@ -91,7 +91,7 @@ if loc and 'coords' in loc:
     # ৬. পয়েন্ট সেভ করার বাটন
     if st.button("➕ Capture & Add to Field Sheet"):
         # গুগল আর্থ ইঞ্জিন থেকে এলিভেশন আনা
-        elevation = get_elevation_from_gee(lat, lon)
+        elevation = get_elevation(lat, lon)
         
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
