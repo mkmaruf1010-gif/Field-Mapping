@@ -60,7 +60,7 @@ if 'field_data' not in st.session_state:
     st.session_state.field_data = []
 
 # --- ৪. ইউজার ইন্টারফেস (UI) ---
-st.title("📍 Smart GIS Field GPS & Elevation Collector")
+st.title(" Smart GIS Field GPS & Elevation Collector")
 st.caption("Multi-User Live Geolocation & Google Earth Elevation Processing")
 
 # সার্ভেয়ার তথ্য
@@ -73,7 +73,7 @@ with col2:
 st.markdown("---")
 
 # ৫. লাইভ জিপিএস ক্যাপচার (Streamlit JS Eval)
-st.subheader("১. লাইভ কোঅর্ডিনেট ক্যাপচার")
+st.subheader("Live Coordinate")
 loc = get_geolocation()
 
 if loc and 'coords' in loc:
@@ -89,7 +89,7 @@ if loc and 'coords' in loc:
 )
 
     # ৬. পয়েন্ট সেভ করার বাটন
-    if st.button("➕ Capture & Add to Field Sheet"):
+    if st.button(" Capture & Add to Field Sheet"):
         # গুগল আর্থ ইঞ্জিন থেকে এলিভেশন আনা
         elevation = get_elevation(lat, lon)
         
@@ -110,11 +110,11 @@ if loc and 'coords' in loc:
         st.toast(f"Point #{point_entry['Point_ID']} Added Successfully!")
 
 else:
-    st.warning("⚠️ অনুগ্রহ করে ব্রাউজারের Location Permission 'Allow' করুন এবং জিপিএস অন রাখুন।")
+    st.warning("Please 'Allow' Location Permission of your browser")
 
 # --- ৭. এক্সেল ফিল্ড শিট ও ডেটাবেস ভিউ ---
 st.markdown("---")
-st.subheader("২. সংগৃহীত ফিল্ড শিট (Live Sheet)")
+st.subheader("Collected Data")
 
 if st.session_state.field_data:
     df = pd.DataFrame(st.session_state.field_data)
@@ -132,7 +132,7 @@ if st.session_state.field_data:
     excel_data = convert_df_to_excel(df)
 
     st.download_button(
-        label="📥 Export Field Sheet to Excel (.xlsx)",
+        label=" Export Field Sheet to Excel (.xlsx)",
         data=excel_data,
         file_name=f"GIS_Field_Survey_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
