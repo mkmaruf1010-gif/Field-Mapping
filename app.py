@@ -5,19 +5,20 @@ import json
 import requests
 import gspread
 from datetime import datetime
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 from streamlit_js_eval import get_geolocation
 
-st.set_page_config(page_title="Multi-User GIS Field Collector", layout="wide")
+st.set_page_config(page_title="Multi-User GIS Field Data Collector", layout="wide")
 
 # --- ১. গুগল আর্থ ইঞ্জিন অথেন্টিকেশন ---
 @st.cache_resource
 def init_earth_engine():
     try:
         credentials_dict = dict(st.secrets["gee_credentials"])
+        
         credentials = ee.ServiceAccountCredentials(
             credentials_dict["client_email"],
-            key_data=credentials_dict
+            key_data=json.dumps(credentials_dict)
         )
         ee.Initialize(credentials)
         return True
@@ -31,12 +32,17 @@ gee_active = init_earth_engine()
 @st.cache_resource
 def connect_to_gsheet():
     try:
-        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        scope = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
         credentials_dict = dict(st.secrets["gee_credentials"])
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
+        
+        creds = Credentials.from_service_account_info(credentials_dict, scopes=scope)
         client = gspread.authorize(creds)
-        # আপনার তৈরি করা Google Sheet-এর নাম দিন
-        sheet = client.open("GIS_Field_Survey_Data").sheet1
+        
+        # আপনার Google Sheet-এর নাম
+        sheet = client.open("1usuQ9bq6CmAOF-DoucXXP9zLbezylNPNXX9Vs30Xt8Y/edit").sheet1
         return sheet
     except Exception as e:
         st.error(f"Google Sheet Connection Error: {e}")
@@ -44,9 +50,8 @@ def connect_to_gsheet():
 
 gsheet = connect_to_gsheet()
 
-# --- ৩. এলিভেশন ফেচিং ফাংশন (১০ দশমিক ঘর সাপোর্টসহ) ---
+# --- ৩. এলিভেশন ফেচিং ফাংশন (১০ দশমিক স্থান সাপোর্ট) ---
 def get_elevation(lat, lon):
-    # ১ম চেষ্টা: Google Earth Engine (SRTM 30m)
     if gee_active:
         try:
             point = ee.Geometry.Point([lon, lat])
@@ -63,7 +68,7 @@ def get_elevation(lat, lon):
         except Exception:
             pass
 
-    # ২য় চেষ্টা (Fallback): Open-Elevation REST API
+    # Open-Elevation REST API
     try:
         url = f"https://api.open-elevation.com/api/v1/lookup?locations={lat:.10f},{lon:.10f}"
         response = requests.get(url, timeout=5).json()
@@ -88,7 +93,6 @@ st.subheader("Live Coordinate Capture")
 loc = get_geolocation()
 
 if loc and 'coords' in loc:
-    # ১০ দশমিক ঘর ফ্লোটিং ভ্যালু নিশ্চিত করা
     lat = float(loc['coords']['latitude'])
     lon = float(loc['coords']['longitude'])
     accuracy = loc['coords']['accuracy']
@@ -103,16 +107,15 @@ if loc and 'coords' in loc:
         unsafe_allow_html=True
     )
 
-    # --- ৬. পয়েন্ট সেভ ও গুগল শিট পুশ বাটন ---
+    # --- ৬. পয়েন্ট সেভ ও গুগল শিট সিঙ্ক ---
     if st.button("➕ Capture & Sync to Google Sheet"):
         elevation = get_elevation(lat, lon)
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         if gsheet:
             try:
-                # গুগল শিটে সারি গণনা করে নতুন ID তৈরি
                 existing_rows = len(gsheet.get_all_values())
-                point_id = existing_rows # Header বাদ দিয়ে ১ থেকে শুরু
+                point_id = existing_rows
                 
                 row_data = [
                     point_id,
@@ -125,7 +128,6 @@ if loc and 'coords' in loc:
                     timestamp
                 ]
                 
-                # সেন্ট্রাল গুগল শিটে ডাটা পাঠানো
                 gsheet.append_row(row_data)
                 st.toast(f"Point #{point_id} Google Sheet-এ সিঙ্ক হয়েছে!")
             except Exception as e:
@@ -136,9 +138,9 @@ if loc and 'coords' in loc:
 else:
     st.warning("⚠️ Please 'Allow' Location Permission on your browser and enable device GPS.")
 
-# --- ৭. রিয়েল-টাইম সেন্ট্রাল গুগল শিট ও সার্ভেয়ার ড্যাশবোর্ড ---
+# --- ৭. রিয়েল-টাইম সেন্ট্রাল গুগল শিট ড্যাশবোর্ড ---
 st.markdown("---")
-st.subheader("📊 Live Central Google Sheet Data")
+st.subheader(" Live Central Google Sheet Data")
 
 if gsheet:
     try:
@@ -146,7 +148,6 @@ if gsheet:
         if records:
             df_all = pd.DataFrame(records)
             
-            # সার্ভেয়ার অনুযায়ী ড্রপডাউন ফিল্টার
             unique_surveyors = ["All Surveyors"] + list(df_all["Surveyor"].unique())
             selected_surveyor = st.selectbox("🎯 Filter by Surveyor:", unique_surveyors)
             
@@ -155,11 +156,9 @@ if gsheet:
             else:
                 filtered_df = df_all
                 
-            # ফিল্টার করা ডাটা ফ্রেম দেখানো
             st.dataframe(filtered_df, use_container_width=True)
             st.caption(f"Showing {len(filtered_df)} points (Total Recorded: {len(df_all)})")
             
-            # অফলাইন ডাউনলোডের জন্য এক্সেল জেনারেটর
             @st.cache_data
             def convert_df_to_excel(dataframe):
                 from io import BytesIO
