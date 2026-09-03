@@ -42,7 +42,7 @@ def connect_to_gsheet():
         client = gspread.authorize(creds)
         
         # আপনার Google Sheet-এর নাম
-        sheet = client.open("1usuQ9bq6CmAOF-DoucXXP9zLbezylNPNXX9Vs30Xt8Y/edit").sheet1
+        sheet = client.open("1usuQ9bq6CmAOF-DoucXXP9zLbezylNPNXX9Vs30Xt8Y").sheet1
         return sheet
     except Exception as e:
         st.error(f"Google Sheet Connection Error: {e}")
