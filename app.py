@@ -97,8 +97,8 @@ def get_elevation(lat, lon):
         return "N/A"
 
 # --- ৫. ইউজার ইন্টারফেস (UI) ---
-st.title("📍 Smart GIS Field GPS & Elevation Collector")
-st.caption("Multi-User Live Geolocation, Google Earth Elevation & Google Sheets Sync")
+st.title(" Mass GIS Field GPS & Elevation Collector")
+st.caption("Multi-User Live Geolocation")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -131,7 +131,7 @@ if loc and 'coords' in loc:
     )
 
     # --- ৭. পয়েন্ট সেভ ও গুগল শিট সিঙ্ক ---
-    if st.button("➕ Capture & Sync to Google Sheet"):
+    if st.button("Capture & Sync to Google Sheet"):
         elevation = get_elevation(lat, lon)
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
@@ -159,11 +159,11 @@ if loc and 'coords' in loc:
             st.error("Google Sheet কানেক্ট করা নেই। secrets.toml চেক করুন।")
 
 else:
-    st.warning("⚠️ Please 'Allow' Location Permission on your browser and enable device GPS.")
+    st.warning(" Please 'Allow' Location Permission on your browser and enable device GPS.")
 
 # --- ৮. রিয়েল-টাইম সেন্ট্রাল গুগল শিট ড্যাশবোর্ড ---
 st.markdown("---")
-st.subheader("📊 Live Central Google Sheet Data")
+st.subheader("Data View ")
 
 if gsheet:
     try:
@@ -172,7 +172,7 @@ if gsheet:
             df_all = pd.DataFrame(records)
             
             unique_surveyors = ["All Surveyors"] + list(df_all["Surveyor"].unique())
-            selected_surveyor = st.selectbox("🎯 Filter by Surveyor:", unique_surveyors)
+            selected_surveyor = st.selectbox(" Filter by Surveyor:", unique_surveyors)
             
             if selected_surveyor != "All Surveyors":
                 filtered_df = df_all[df_all["Surveyor"] == selected_surveyor]
@@ -193,7 +193,7 @@ if gsheet:
             excel_data = convert_df_to_excel(filtered_df)
 
             st.download_button(
-                label="📥 Export Current View to Excel (.xlsx)",
+                label=" Export Current View to Excel (.xlsx)",
                 data=excel_data,
                 file_name=f"GIS_Survey_{selected_surveyor}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
