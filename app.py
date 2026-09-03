@@ -140,9 +140,9 @@ if loc and 'coords' in loc:
     st.markdown(
         f"<div style='padding: 12px; background-color: #d4edda; color: #155724; border-radius: 5px;'>"
         f"<b>GPS Location Fetched!</b><br>"
-        f"<b>Latitude:</b> {lat:.10f}<br>"
-        f"<b>Longitude:</b> {lon:.10f}<br>"
-        f"<b>Accuracy:</b> ±{accuracy:.1f}m"
+        f"<b>Latitude:</b> {lat:.0010f}<br>"
+        f"<b>Longitude:</b> {lon:.0010f}<br>"
+        f"<b>Accuracy:</b> ±{accuracy:.01f}m"
         f"</div>", 
         unsafe_allow_html=True
     )
@@ -161,8 +161,8 @@ if loc and 'coords' in loc:
                     point_id,
                     surveyor_name,
                     feature_type,
-                    f"{lat:.10f}",
-                    f"{lon:.10f}",
+                    f"{lat:.0010f}",
+                    f"{lon:.0010f}",
                     str(elevation),
                     round(accuracy, 2),
                     timestamp
