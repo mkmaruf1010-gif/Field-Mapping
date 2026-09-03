@@ -28,7 +28,7 @@ def init_earth_engine():
 
 gee_active = init_earth_engine()
 
-# --- ২. গুগল শিটস কানেকশন (সেন্ট্রাল অবজেক্ট তৈরি) ---
+# --- ২. গুগল শিটস কানেকশন ---
 @st.cache_resource
 def connect_to_gsheet_client():
     try:
@@ -40,7 +40,6 @@ def connect_to_gsheet_client():
         creds = Credentials.from_service_account_info(credentials_dict, scopes=scope)
         client = gspread.authorize(creds)
         
-        # আপনার Google Sheet ওপেন করা
         spreadsheet = client.open("FieldSurvey")
         return spreadsheet
     except Exception as e:
@@ -49,43 +48,41 @@ def connect_to_gsheet_client():
 
 gsheet_spreadsheet = connect_to_gsheet_client()
 
-# ডাটা সেভ করার জন্য ১ম ট্যাব
+# ডাটা সেভ করার জন্য ১ম ট্যাব (index 0)
 gsheet = gsheet_spreadsheet.sheet1 if gsheet_spreadsheet else None
 
-# --- ৩. গুগল শিটের ২য় ট্যাব থেকে সার্ভেয়ার নামের তালিকা পড়ার ফাংশন ---
-@st.cache_data(ttl=60) # প্রতি ১ মিনিট পর পর নামের লিস্ট আপডেট হবে
+# --- ৩. ৩য় ট্যাব (Index 2) থেকে সার্ভেয়ার নামের তালিকা পড়ার ফাংশন ---
+@st.cache_data(ttl=60)
 def get_surveyor_list():
     try:
         if gsheet_spreadsheet:
-            # ২য় ট্যাব (index 1) থেকে নাম সংগ্রহ
-            surveyor_tab = gsheet_spreadsheet.get_worksheet(1)
-            names = surveyor_tab.col_values(1)[1:] # A1 সেলের Header বাদ দিয়ে সব নাম আনা
+            # ৩য় ট্যাব থেকে নাম রিড করা
+            surveyor_tab = gsheet_spreadsheet.get_worksheet(2)
+            names = surveyor_tab.col_values(1)[1:]
             
             valid_names = [name.strip() for name in names if name.strip()]
             if valid_names:
                 return valid_names
     except Exception as e:
-        st.warning(f"২য় ট্যাব থেকে সার্ভেয়ার নাম পড়তে সমস্যা হয়েছে: {e}")
+        st.warning(f"৩য় ট্যাব থেকে সার্ভেয়ার নাম পড়তে সমস্যা হয়েছে: {e}")
     
-    # ব্যাকআপ রেসপন্স (যদি ২য় ট্যাবে কোনো নাম না থাকে)
     return ["Surveyor_1", "Surveyor_2", "Surveyor_3"]
 
-# --- ৪. গুগল শিটের ৩য় ট্যাব থেকে Feature Type-এর তালিকা পড়ার ফাংশন ---
-@st.cache_data(ttl=300) # ১,০০০+ ডাটা তাই ৫ মিনিট (৩০০ সেকেন্ড) ক্যাশ রাখা সুবিধাজনক
+# --- ৪. ২য় ট্যাব (Index 1) থেকে Feature Type পড়ার ফাংশন ---
+@st.cache_data(ttl=300)
 def get_feature_types():
     try:
         if gsheet_spreadsheet:
-            # ৩য় ট্যাব (index 2) থেকে ফিচার সংগ্রহ
-            feature_tab = gsheet_spreadsheet.get_worksheet(2)
-            features = feature_tab.col_values(1)[1:] # A1 সেলের Header বাদ দিয়ে সব মান আনা
+            # ২য় ট্যাব থেকে ফিচার রিড করা
+            feature_tab = gsheet_spreadsheet.get_worksheet(1)
+            features = feature_tab.col_values(1)[1:]
             
             valid_features = [f.strip() for f in features if f.strip()]
             if valid_features:
                 return valid_features
     except Exception as e:
-        st.warning(f"৩য় ট্যাব থেকে Feature Type পড়তে সমস্যা হয়েছে: {e}")
+        st.warning(f"২য় ট্যাব থেকে Feature Type পড়তে সমস্যা হয়েছে: {e}")
     
-    # ব্যাকআপ রেসপন্স (যদি ৩য় ট্যাব খালি থাকে)
     return ["Point of Interest", "Water Body", "Road Node", "Boundary Point"]
 
 # --- ৫. এলিভেশন ফেচিং ফাংশন (১০ দশমিক স্থান সাপোর্ট) ---
@@ -115,17 +112,17 @@ def get_elevation(lat, lon):
         return "N/A"
 
 # --- ৬. ইউজার ইন্টারফেস (UI) ---
-st.title(" Mass GIS Field GPS & Elevation Collector")
+st.title("📍 Mass GIS Field GPS & Elevation Collector")
 st.caption("Multi-User Live Geolocation")
 
 col1, col2 = st.columns(2)
 with col1:
-    # গুগল শিটের ২য় ট্যাব থেকে আসা সার্ভেয়ার ড্রপডাউন
+    # ৩য় ট্যাব থেকে নাম লোড হবে
     surveyor_options = get_surveyor_list()
     surveyor_name = st.selectbox("Select Surveyor Name / ID", surveyor_options)
     
 with col2:
-    # গুগল শিটের ৩য় ট্যাব থেকে আসা ১,০০০+ ফিচার টাইপ ড্রপডাউন
+    # ২য় ট্যাব থেকে ফিচার লোড হবে
     feature_options = get_feature_types()
     feature_type = st.selectbox("Select Feature Type", feature_options)
 
@@ -179,11 +176,11 @@ if loc and 'coords' in loc:
             st.error("Google Sheet কানেক্ট করা নেই। secrets.toml চেক করুন।")
 
 else:
-    st.warning(" Please 'Allow' Location Permission on your browser and enable device GPS.")
+    st.warning("⚠️ Please 'Allow' Location Permission on your browser and enable device GPS.")
 
 # --- ৯. রিয়েল-টাইম সেন্ট্রাল গুগল শিট ড্যাশবোর্ড ---
 st.markdown("---")
-st.subheader("Data View ")
+st.subheader("📊 Data View")
 
 if gsheet:
     try:
@@ -192,7 +189,7 @@ if gsheet:
             df_all = pd.DataFrame(records)
             
             unique_surveyors = ["All Surveyors"] + list(df_all["Surveyor"].unique())
-            selected_surveyor = st.selectbox(" Filter by Surveyor:", unique_surveyors)
+            selected_surveyor = st.selectbox("🎯 Filter by Surveyor:", unique_surveyors)
             
             if selected_surveyor != "All Surveyors":
                 filtered_df = df_all[df_all["Surveyor"] == selected_surveyor]
@@ -213,7 +210,7 @@ if gsheet:
             excel_data = convert_df_to_excel(filtered_df)
 
             st.download_button(
-                label=" Export Current View to Excel (.xlsx)",
+                label="📥 Export Current View to Excel (.xlsx)",
                 data=excel_data,
                 file_name=f"GIS_Survey_{selected_surveyor}_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
